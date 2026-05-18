@@ -35,9 +35,14 @@ export function formatSnapshot(snapshot: GatewaySnapshot): string {
     lines.push('pools:');
     for (const p of snapshot.pools) {
       lines.push(
-        `  ${p.pool}  req=${p.requestCount} err=${p.errorCount} retries=${p.retryCount} rate_limit_rejects=${p.rateLimitRejects} breaker_opens=${p.breakerOpenCount} p50=${p.latencyP50Ms}ms p95=${p.latencyP95Ms}ms`,
+        `  ${p.pool}  req=${p.requestCount} err=${p.errorCount} retries=${p.retryCount} rate_limit_rejects=${p.rateLimitRejects} breaker_opens=${p.breakerOpenCount} failovers=${p.failoverAttempts} p50=${p.latencyP50Ms}ms p95=${p.latencyP95Ms}ms`,
       );
       if (p.lastErrorReason) lines.push(`    last_error: ${p.lastErrorReason}`);
+      if (p.lastFinalUpstreamUrl) {
+        lines.push(
+          `    last_final_upstream: ${p.lastFinalUpstreamUrl} outcome=${p.lastFinalUpstreamOutcome}`,
+        );
+      }
       for (const e of p.endpoints) {
         lines.push(`    endpoint ${e.url}  breaker=${e.breakerState} health=${e.health}`);
       }

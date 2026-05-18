@@ -4,6 +4,12 @@ export interface Route {
   readonly method: HttpMethod;
   readonly path: string;
   readonly pool: string;
+  // Declarative override of the HTTP-method idempotency default. Per
+  // RFC 9110, GET/PUT/DELETE are idempotent and POST/PATCH are not, but
+  // a route can opt in (POST with an Idempotency-Key contract) or out
+  // (a legacy GET that mutates server state). The orchestrator reads
+  // this flag when deciding whether to fail over on a retryable error.
+  readonly idempotent?: boolean;
 }
 
 export interface UpstreamEndpoint {

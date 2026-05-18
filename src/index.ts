@@ -140,4 +140,22 @@ export type {
   RequestEvent,
   RequestOutcome,
   RouteSnapshot,
+  UpstreamCallOutcome,
 } from './observability';
+
+export {
+  DEFAULT_RETRY_POLICY,
+  classifyNetworkError,
+  classifyResponse,
+  createOrchestratorTerminal,
+  isRouteIdempotent,
+  performUpstreamCall,
+} from './orchestrator';
+export type {
+  OrchestratorOptions,
+  OrchestratorOutcome,
+  RetryPolicy,
+  UpstreamFailureKind,
+  UpstreamResult,
+  UpstreamSend,
+} from './orchestrator';

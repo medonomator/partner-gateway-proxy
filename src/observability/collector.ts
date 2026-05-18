@@ -22,6 +22,7 @@ import type {
   PoolSnapshot,
   RequestEvent,
   RouteSnapshot,
+  UpstreamCallOutcome,
 } from './types';
 
 export interface CollectorOptions {
@@ -35,8 +36,11 @@ interface PoolBucket {
   retryCount: number;
   rateLimitRejects: number;
   breakerOpenCount: number;
+  failoverAttempts: number;
   histogram: LatencyHistogram;
   lastErrorReason?: string;
+  lastFinalUpstreamUrl?: string;
+  lastFinalUpstreamOutcome?: UpstreamCallOutcome;
   endpoints: Map<string, CircuitState>;
 }
 
@@ -113,6 +117,16 @@ export class InMemoryMetricsCollector implements MetricsCollector {
     this.poolBucket(pool).endpoints.set(endpoint, state);
   }
 
+  recordFailoverAttempt(pool: string, _route: string, _fromEndpoint: string): void {
+    this.poolBucket(pool).failoverAttempts++;
+  }
+
+  recordFinalUpstream(pool: string, endpoint: string, outcome: UpstreamCallOutcome): void {
+    const bucket = this.poolBucket(pool);
+    bucket.lastFinalUpstreamUrl = endpoint;
+    bucket.lastFinalUpstreamOutcome = outcome;
+  }
+
   snapshot(): GatewaySnapshot {
     const generatedAtMs = this.clock();
     const pools: PoolSnapshot[] = Array.from(this.pools.entries())
@@ -144,6 +158,7 @@ export class InMemoryMetricsCollector implements MetricsCollector {
         retryCount: 0,
         rateLimitRejects: 0,
         breakerOpenCount: 0,
+        failoverAttempts: 0,
         histogram: new LatencyHistogram(this.buckets),
         endpoints: new Map(),
       };
@@ -163,11 +178,14 @@ export class InMemoryMetricsCollector implements MetricsCollector {
       retryCount: b.retryCount,
       rateLimitRejects: b.rateLimitRejects,
       breakerOpenCount: b.breakerOpenCount,
+      failoverAttempts: b.failoverAttempts,
       latencyP50Ms: b.histogram.quantile(0.5),
       latencyP95Ms: b.histogram.quantile(0.95),
       histogram: b.histogram.snapshot(),
       endpoints,
       lastErrorReason: b.lastErrorReason,
+      lastFinalUpstreamUrl: b.lastFinalUpstreamUrl,
+      lastFinalUpstreamOutcome: b.lastFinalUpstreamOutcome,
     };
   }
 

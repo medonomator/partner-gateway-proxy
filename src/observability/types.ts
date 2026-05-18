@@ -50,6 +50,8 @@ export interface EndpointSnapshot {
   readonly health: HealthState;
 }
 
+export type UpstreamCallOutcome = 'success' | 'failure';
+
 export interface PoolSnapshot {
   readonly pool: string;
   readonly requestCount: number;
@@ -57,11 +59,14 @@ export interface PoolSnapshot {
   readonly retryCount: number;
   readonly rateLimitRejects: number;
   readonly breakerOpenCount: number;
+  readonly failoverAttempts: number;
   readonly latencyP50Ms: number;
   readonly latencyP95Ms: number;
   readonly histogram: HistogramSnapshot;
   readonly endpoints: ReadonlyArray<EndpointSnapshot>;
   readonly lastErrorReason?: string;
+  readonly lastFinalUpstreamUrl?: string;
+  readonly lastFinalUpstreamOutcome?: UpstreamCallOutcome;
 }
 
 export interface RouteSnapshot {
@@ -86,6 +91,8 @@ export interface MetricsCollector {
   recordRateLimitReject(pool: string, route: string): void;
   recordBreakerOpen(pool: string, endpoint: string, reason?: string): void;
   recordBreakerState(pool: string, endpoint: string, state: CircuitState): void;
+  recordFailoverAttempt(pool: string, route: string, fromEndpoint: string): void;
+  recordFinalUpstream(pool: string, endpoint: string, outcome: UpstreamCallOutcome): void;
   snapshot(): GatewaySnapshot;
   reset(): void;
 }

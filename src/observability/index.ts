@@ -14,4 +14,5 @@ export type {
   RequestEvent,
   RequestOutcome,
   RouteSnapshot,
+  UpstreamCallOutcome,
 } from './types';
