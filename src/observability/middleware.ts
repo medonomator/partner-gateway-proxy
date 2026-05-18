@@ -8,10 +8,11 @@
  * concern in one place without forcing every other layer to hold a
  * collector handle.
  *
- * Wiring order: place AFTER `traceMiddleware` so requests carry a
- * trace_id for cross-stitching, and OUTSIDE rate-limit/auth so rejected
- * requests still get counted - that is the signal an operator cares
- * about most.
+ * Wiring order: place this middleware **outermost** in the pipeline.
+ * Auth, rate-limit and breaker layers short-circuit (they return a
+ * response without calling `next()`), so any middleware downstream of
+ * them never sees rejected requests. The metrics layer is the operator's
+ * eye on those rejections, so it MUST sit above them.
  */
 import type { Middleware } from '../http';
 import type { MetricsCollector, RequestEvent, RequestOutcome } from './types';
@@ -21,6 +22,12 @@ export interface MetricsMiddlewareOptions {
   readonly clock?: () => number;
 }
 
+// Precedence order matters: structured ctx.log signals beat raw status.
+// A 429 with rate_limit_outcome=rejected must be classified as
+// rate_limited, not as a generic client_error - the operator chart needs
+// to separate "rejected by policy" from "the client sent garbage". Same
+// for breaker_open. New ctx.log flags should be added ABOVE the status
+// fallbacks, or the classification will silently regress.
 function deriveOutcome(status: number, logFields: Record<string, unknown>): RequestOutcome {
   if (logFields.rate_limit_outcome === 'rejected') return 'rate_limited';
   if (logFields.breaker_outcome === 'circuit_open') return 'breaker_open';

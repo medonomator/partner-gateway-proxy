@@ -49,6 +49,9 @@ function seedDemoTraffic(collector: InMemoryMetricsCollector): void {
 function main(): void {
   const collector = new InMemoryMetricsCollector();
   seedDemoTraffic(collector);
+  console.log('# DEMO OUTPUT - synthetic traffic seeded in bin/snapshot.ts');
+  console.log('# Wire createMetricsMiddleware into the real pipeline to get runtime numbers.');
+  console.log('');
   console.log(formatSnapshot(collector.snapshot()));
 }
 
