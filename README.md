@@ -17,10 +17,32 @@
 ## Структура
 
 ```
-src/      - исходники приложения
+src/
+├── index.ts        - точка входа (CLI + сборка дефолтного router)
+└── routing/        - декларативная routing-таблица + матчер (Task #2)
+    ├── types.ts    - HttpMethod, Route, UpstreamPool, RouteMatchResult
+    ├── config.ts   - DEFAULT_ROUTES / DEFAULT_POOLS
+    ├── router.ts   - createRouter(routes, pools) -> Router
+    └── index.ts    - re-exports
+
 tests/    - тесты vitest (*.test.ts)
 dist/     - артефакты сборки (не коммитятся)
 ```
+
+## Routing
+
+Маршруты описаны декларативно через `(method, path) -> pool name` в `src/routing/config.ts`. Каждый pool несёт массив endpoint-ов - на следующих этапах сюда лягут load balancing и health checks.
+
+```ts
+import { createRouter, DEFAULT_ROUTES, DEFAULT_POOLS } from './routing';
+
+const router = createRouter(DEFAULT_ROUTES, DEFAULT_POOLS);
+const result = router.match('POST', '/v1/billing/invoice');
+// { ok: true, route, pool: { name: 'billing', endpoints: [...] } }
+// либо { ok: false, reason: 'no_route' | 'method_not_allowed', ... }
+```
+
+Матчинг точный - без wildcard и префиксов. `createRouter` fail-fast: дубли маршрутов и ссылки на несуществующие pool-ы валятся при конструировании, не в проде.
 
 ## Запуск и проверка
 
