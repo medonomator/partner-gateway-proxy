@@ -69,3 +69,13 @@ export type {
   Outcome,
   EndpointPick,
 } from './policy/circuit-breaker';
+
+export { WeightedRoundRobinBalancer, healthFromBreaker } from './balance';
+export type {
+  Balancer,
+  BalancerConfig,
+  BalancerPick,
+  HealthSnapshot,
+  HealthState,
+  WeightedEndpoint,
+} from './balance';
