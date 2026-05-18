@@ -159,3 +159,18 @@ export type {
   UpstreamResult,
   UpstreamSend,
 } from './orchestrator';
+
+export {
+  DEFAULT_MIN_REQUESTS_FOR_CHECKS,
+  detectBudgetBreaches,
+} from './budgets';
+export type {
+  AlertMetric,
+  AlertScope,
+  AlertSeverity,
+  BudgetAlert,
+  BudgetRules,
+  BudgetThreshold,
+  PoolBudgetRules,
+  RouteBudgetRules,
+} from './budgets';
