@@ -54,3 +54,18 @@ export type {
   KeyResolver,
   RedisClientLike,
 } from './policy/rate-limit';
+
+export {
+  createCircuitBreaker,
+  pickEndpoint,
+  endpointKey,
+} from './policy/circuit-breaker';
+export type {
+  CircuitBreaker,
+  CircuitBreakerConfig,
+  CircuitDecision,
+  CircuitMetricsSnapshot,
+  CircuitState,
+  Outcome,
+  EndpointPick,
+} from './policy/circuit-breaker';
