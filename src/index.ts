@@ -39,3 +39,18 @@ export type {
   UpstreamPool,
   UpstreamEndpoint,
 } from './routing';
+
+export {
+  InMemoryTokenBucketLimiter,
+  RedisTokenBucketLimiter,
+  createKeyResolver,
+} from './policy/rate-limit';
+export type {
+  Limiter,
+  LimitDecision,
+  LimiterContext,
+  TokenBucketConfig,
+  KeyScope,
+  KeyResolver,
+  RedisClientLike,
+} from './policy/rate-limit';
