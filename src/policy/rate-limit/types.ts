@@ -16,6 +16,13 @@ export interface LimiterContext {
   readonly cost?: number;
 }
 
+/**
+ * Numeric contract on the boundary:
+ *   - `remainingTokens` is a real number; partial refills produce fractional
+ *     balances by design, so the rate isn't truncated.
+ *   - `retryAfterMs` is integer milliseconds, rounded UP. Round-up is what
+ *     metrics and Retry-After headers expect: never under-promise wait time.
+ */
 export type LimitDecision =
   | {
       readonly allowed: true;

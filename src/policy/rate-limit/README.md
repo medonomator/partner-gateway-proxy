@@ -23,6 +23,9 @@ so swapping is a one-line change and the parity test in
 
 - `pool` (default choice for partner quotas) - one bucket per upstream pool.
   Right when the limit comes from the provider ("billing API allows 50 rps").
+  This is also the *forward-compatible* default: if a future caller does not
+  opt into a scope, pool-level limiting is the safest contract because it
+  matches how partner-imposed quotas are enforced upstream.
 - `route` - one bucket per (method, path). Right when two routes share a
   pool but have different SLAs (e.g. mutating writes throttled stricter
   than reads).

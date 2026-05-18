@@ -50,6 +50,28 @@ describe('InMemoryTokenBucketLimiter', () => {
     expect(next.allowed).toBe(false);
   });
 
+  it('caps sustained throughput near the refill rate over a long window', async () => {
+    const lim = new InMemoryTokenBucketLimiter({ capacity: 3, refillTokensPerSecond: 2 });
+    const startMs = 1000;
+    const intervalMs = 100;
+    const totalRequests = 100;
+
+    let allowed = 0;
+    for (let i = 0; i < totalRequests; i++) {
+      const r = await lim.acquire({ key: 'k', now: startMs + i * intervalMs });
+      if (r.allowed) allowed++;
+    }
+
+    // Initial capacity (3) plus refill of 2 tok/s over the (n-1)*interval span:
+    //   3 + 2 * 9.9s = ~22.8. Boundary phasing keeps the actual count tight
+    //   around that value.
+    expect(allowed).toBeGreaterThanOrEqual(22);
+    expect(allowed).toBeLessThanOrEqual(24);
+
+    // And the limiter must be doing real work, not approving everything.
+    expect(allowed).toBeLessThan(totalRequests / 3);
+  });
+
   it('rejects invalid config and invalid cost', () => {
     expect(() => new InMemoryTokenBucketLimiter({ capacity: 0, refillTokensPerSecond: 1 })).toThrow();
     expect(() => new InMemoryTokenBucketLimiter({ capacity: 1, refillTokensPerSecond: 0 })).toThrow();

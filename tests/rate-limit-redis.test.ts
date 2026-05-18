@@ -53,6 +53,33 @@ describe('RedisTokenBucketLimiter', () => {
     }
   });
 
+  it('caps sustained throughput near the refill rate over a long window', async () => {
+    const lim = new RedisTokenBucketLimiter(new FakeRedisClient(), { capacity: 3, refillTokensPerSecond: 2 });
+    const startMs = 1000;
+    const intervalMs = 100;
+    const totalRequests = 100;
+
+    let allowed = 0;
+    for (let i = 0; i < totalRequests; i++) {
+      const r = await lim.acquire({ key: 'k', now: startMs + i * intervalMs });
+      if (r.allowed) allowed++;
+    }
+
+    expect(allowed).toBeGreaterThanOrEqual(22);
+    expect(allowed).toBeLessThanOrEqual(24);
+    expect(allowed).toBeLessThan(totalRequests / 3);
+  });
+
+  it('throws a typed error when Redis returns a malformed reply', async () => {
+    const badClient = {
+      async eval() {
+        return 'definitely-not-an-array';
+      },
+    };
+    const lim = new RedisTokenBucketLimiter(badClient, config);
+    await expect(lim.acquire({ key: 'k', now: 1000 })).rejects.toThrow(/unexpected redis/i);
+  });
+
   it('namespaces keys with the configured prefix', async () => {
     const observed: string[] = [];
     const spyClient = {
