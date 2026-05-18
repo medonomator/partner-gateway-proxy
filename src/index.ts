@@ -121,3 +121,23 @@ export type {
   TraceContext,
   TraceMiddlewareOptions,
 } from './tracing';
+
+export {
+  DEFAULT_BUCKETS_MS,
+  InMemoryMetricsCollector,
+  LatencyHistogram,
+  attachBreakerState,
+  createMetricsMiddleware,
+  formatSnapshot,
+} from './observability';
+export type {
+  EndpointSnapshot,
+  GatewaySnapshot,
+  HistogramBucket,
+  HistogramSnapshot,
+  MetricsCollector,
+  PoolSnapshot,
+  RequestEvent,
+  RequestOutcome,
+  RouteSnapshot,
+} from './observability';
