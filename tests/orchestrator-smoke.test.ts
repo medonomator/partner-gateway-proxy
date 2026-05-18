@@ -39,20 +39,25 @@ import {
 import type { Route, UpstreamPool } from '../src/routing';
 import { makeCtx } from './_helpers/ctx';
 
+type FailureMode = 'status_503' | 'throw_econnreset';
+
 interface MockUpstream {
   url: string;
   alive: boolean;
+  failureMode: FailureMode;
   calls: Array<{ traceparent: string | undefined; body: unknown }>;
-  kill(): void;
+  kill(mode?: FailureMode): void;
 }
 
 function createMockUpstream(url: string): MockUpstream {
   const m: MockUpstream = {
     url,
     alive: true,
+    failureMode: 'status_503',
     calls: [],
-    kill() {
+    kill(mode: FailureMode = 'status_503') {
       m.alive = false;
+      m.failureMode = mode;
     },
   };
   return m;
@@ -68,6 +73,9 @@ function buildSend(...mocks: MockUpstream[]): UpstreamSend {
       body: ctx.incoming.body,
     });
     if (!mock.alive) {
+      if (mock.failureMode === 'throw_econnreset') {
+        throw new Error('ECONNRESET');
+      }
       const r: GatewayResponse = {
         status: 503,
         headers: new Headers(),
@@ -170,6 +178,33 @@ describe('orchestrator smoke: graceful failover', () => {
     expect(eu_b.calls.length).toBeGreaterThanOrEqual(2);
 
     const pool = collector.snapshot().pools.find((p) => p.pool === 'partners-eu')!;
+    expect(pool.lastFinalUpstreamUrl).toBe('https://eu-b.local');
+    expect(pool.lastFinalUpstreamOutcome).toBe('success');
+  });
+
+  it('fails over on a thrown connection error (real connection drop, not a 503 body)', async () => {
+    // Distinct from the 503-response path: here the send callback throws,
+    // simulating ECONNRESET at the transport layer. The orchestrator must
+    // still fail over for an idempotent route and the survivor must
+    // produce a real 200, not a synthetic gateway response.
+    const eu_a = createMockUpstream('https://eu-a.local');
+    const eu_b = createMockUpstream('https://eu-b.local');
+    const collector = new InMemoryMetricsCollector();
+    const handler = buildPipeline(buildSend(eu_a, eu_b), collector);
+
+    eu_a.kill('throw_econnreset');
+
+    const response = await handler(
+      makeCtx({ pool: POOL, route: idempotentRoute }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ from: 'https://eu-b.local' });
+    expect(eu_a.calls).toHaveLength(1);
+    expect(eu_b.calls).toHaveLength(1);
+
+    const pool = collector.snapshot().pools.find((p) => p.pool === 'partners-eu')!;
+    expect(pool.failoverAttempts).toBe(1);
     expect(pool.lastFinalUpstreamUrl).toBe('https://eu-b.local');
     expect(pool.lastFinalUpstreamOutcome).toBe('success');
   });

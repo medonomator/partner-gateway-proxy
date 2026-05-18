@@ -6,21 +6,34 @@
  *
  *   1. Ask the balancer for an endpoint from the pool, weighted by
  *      breaker-derived health (closed -> healthy, half_open -> degraded,
- *      open -> down). If no healthy endpoint exists, return 503.
+ *      open -> down). If no healthy endpoint exists, return synthetic 503.
  *   2. Consult `breaker.beforeRequest` for the chosen endpoint. If the
- *      circuit is open we skip the endpoint, count a failover, and try
- *      the next one (no upstream call wasted on a known-bad endpoint).
+ *      circuit is open we silently skip the endpoint and try the next one:
+ *      no upstream call is made, no attempt is counted, no failover is
+ *      counted. The breaker layer has its own counter for short-circuited
+ *      requests; conflating it with "failover" would inflate the signal.
  *   3. Call `send(endpoint, ctx)`. Classify the response or thrown
  *      error: success -> record success and return; retryable failure
- *      -> record failure, count failover, continue if policy + idempotency
- *      both allow; non-retryable failure -> return the response as-is.
+ *      -> record failure, count failover (only for the 2nd+ real attempt),
+ *      continue if policy + idempotency both allow; non-retryable failure
+ *      -> return the response as-is.
  *   4. After `maxAttempts` or after running out of healthy endpoints,
- *      return the last response or a synthetic 503.
+ *      return the last response, or a gateway-synthesized 503 if there
+ *      is no response in hand (e.g. every endpoint threw or every
+ *      endpoint was breaker-skipped). See README "Synthetic 503".
  *
- * `recordFailoverAttempt` fires once per *additional* attempt against a
- * different endpoint - so a single-attempt success records zero
- * failovers. `recordFinalUpstream` fires exactly once per request with
- * the endpoint that produced the returned response (success or failure).
+ * Iteration state (which endpoints we have already tried in *this*
+ * request) lives in `triedUrls` and is overlaid as `down` on the health
+ * snapshot passed to the balancer. The balancer itself is stateless
+ * across iterations - it picks from whatever health snapshot it gets.
+ * This split keeps the balancer reusable and concentrates "skip
+ * already-tried" logic here.
+ *
+ * `recordFailoverAttempt` fires once per *additional real* attempt
+ * against a different endpoint - a single-attempt success records zero,
+ * and breaker skips (step 2) do NOT bump it. `recordFinalUpstream` fires
+ * exactly once per request with the endpoint that produced the returned
+ * response (success or failure).
  */
 import type { GatewayResponse, RequestContext } from '../http';
 import { Headers } from '../http';
