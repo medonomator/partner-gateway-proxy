@@ -79,3 +79,45 @@ export type {
   HealthState,
   WeightedEndpoint,
 } from './balance';
+
+export { Headers, composeMiddleware } from './http';
+export type {
+  FinalHandler,
+  GatewayResponse,
+  IncomingRequest,
+  Middleware,
+  RequestContext,
+  UpstreamRequest,
+} from './http';
+
+export {
+  BearerAuthStrategy,
+  HmacAuthStrategy,
+  createAuthMiddleware,
+  createAuthPolicy,
+} from './auth';
+export type {
+  AuthIdentity,
+  AuthOutcome,
+  AuthStrategy,
+  AuthPolicy,
+  BearerTokenStore,
+  HmacKeyStore,
+} from './auth';
+
+export {
+  InMemorySpanRecorder,
+  createTraceMiddleware,
+  defaultIdGenerator,
+  formatTraceparent,
+  newTraceContext,
+  parseTraceparent,
+} from './tracing';
+export type {
+  IdGenerator,
+  Span,
+  SpanAttributes,
+  SpanRecorder,
+  TraceContext,
+  TraceMiddlewareOptions,
+} from './tracing';
