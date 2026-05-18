@@ -41,13 +41,37 @@ never a duplicate pair.
 ## Low-traffic suppression
 
 Below `minRequestsForChecks` (default 20) requests, all rules are
-skipped for that target. The number is per-target (per pool, per
+skipped **for that target**. The number is per-target (per pool, per
 route), not per gateway. The reason: a single 500 in the first three
 requests after a `reset()` is not a 33% error rate, it is a warmup
 artifact. Without this suppression, every `reset()` would flood the
 alert channel for the first few seconds. The number is intentionally
 small so a misconfigured route still trips the alarm after a minute
 or two of live traffic.
+
+The pool-level floor is independent of the route-level floor. A
+high-traffic pool whose `requestCount` already crossed the floor will
+still emit pool alerts even if one of its routes is below the floor.
+The under-trafficked route stays silent until it accumulates enough
+samples to back its own rate calculation. This split is deliberate -
+pool stats aggregate across all routes and are statistically
+meaningful sooner, while a route's rates need their own volume before
+they are trustworthy. Operators who want the route to inherit its
+pool's traffic floor should tune `minRequestsForChecks` lower, not
+fold the two scopes together.
+
+## Reason format
+
+Each alert carries a `reason` string ready for CLI / logs:
+
+```
+pool=partners-eu error_rate=0.07 >= warning 0.02
+pool=partners-eu p95_latency_ms=1000ms >= critical 1500ms
+```
+
+Rates render as unit-free decimals (`0.07` = 7%); latency carries an
+explicit `ms` suffix so a CLI grep or log search will not confuse a
+rate threshold with a millisecond threshold.
 
 ## Output shape
 

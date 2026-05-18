@@ -182,15 +182,37 @@ describe('detectBudgetBreaches', () => {
     expect(a).toEqual(b);
   });
 
-  it('reason text includes scope, target, metric, observed and threshold', () => {
+  it('reason text includes scope, target, metric, observed, severity and threshold', () => {
     const snap = makeSnapshot([
       makePool({ errorCount: 20 }),
     ]);
     const [alert] = detectBudgetBreaches(snap, RULES);
     expect(alert.reason).toContain('pool=partners-eu');
     expect(alert.reason).toContain('error_rate=');
-    expect(alert.reason).toContain('>=');
+    expect(alert.reason).toContain('>= critical');
     expect(alert.reason).toContain('0.1');
+  });
+
+  it('latency reasons carry the ms unit so rates and ms cannot be confused', () => {
+    const snap = makeSnapshot([
+      makePool({ latencyP95Ms: 2000 }),
+    ]);
+    const [alert] = detectBudgetBreaches(snap, RULES);
+    expect(alert.metric).toBe('p95_latency_ms');
+    expect(alert.reason).toBe(
+      'pool=partners-eu p95_latency_ms=2000ms >= critical 1500ms',
+    );
+  });
+
+  it('rate reasons stay unit-free decimals so they match the rule shape', () => {
+    const snap = makeSnapshot([
+      makePool({ errorCount: 7 }), // 0.07 > 0.02 warning
+    ]);
+    const [alert] = detectBudgetBreaches(snap, RULES);
+    expect(alert.metric).toBe('error_rate');
+    expect(alert.reason).toBe(
+      'pool=partners-eu error_rate=0.07 >= warning 0.02',
+    );
   });
 
   it('does not fire on requestCount=0 even when traffic floor would technically allow it', () => {

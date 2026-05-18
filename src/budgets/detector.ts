@@ -59,8 +59,19 @@ function formatNumber(n: number): string {
   return n.toFixed(3).replace(/\.?0+$/, '');
 }
 
-function reasonText(check: Check, bound: number): string {
-  return `${check.scope}=${check.target} ${check.metric}=${formatNumber(check.observed)} >= ${formatNumber(bound)}`;
+// Rates are unit-free decimal ratios (0.07 = 7%); latency carries an
+// explicit `ms` suffix so a CLI grep does not mistake `1000` for a
+// ratio or vice versa.
+function formatValue(metric: AlertMetric, n: number): string {
+  if (metric === 'p95_latency_ms') return `${formatNumber(n)}ms`;
+  return formatNumber(n);
+}
+
+function reasonText(check: Check, bound: number, severity: AlertSeverity): string {
+  return (
+    `${check.scope}=${check.target} ${check.metric}=${formatValue(check.metric, check.observed)}` +
+    ` >= ${severity} ${formatValue(check.metric, bound)}`
+  );
 }
 
 function poolChecks(p: PoolSnapshot, rules: BudgetRules['pool']): Check[] {
@@ -164,7 +175,7 @@ export function detectBudgetBreaches(
         observed: check.observed,
         threshold: hit.bound,
         severity: hit.severity,
-        reason: reasonText(check, hit.bound),
+        reason: reasonText(check, hit.bound, hit.severity),
       });
     }
   }
@@ -182,7 +193,7 @@ export function detectBudgetBreaches(
         observed: check.observed,
         threshold: hit.bound,
         severity: hit.severity,
-        reason: reasonText(check, hit.bound),
+        reason: reasonText(check, hit.bound, hit.severity),
       });
     }
   }
